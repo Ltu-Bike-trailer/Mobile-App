@@ -1,0 +1,21 @@
+# Node.js dependencies
+node_modules/
+
+# Expo and project-specific files
+.expo/
+.expo-shared/
+
+# Native files and build artifacts
+android/
+ios/
+
+# IDE and OS-specific files
+.DS_Store
+.vscode/
+.idea/
+
+# Log files
+*.log
+
+# Other build artifacts
+*.lock
