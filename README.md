@@ -19,7 +19,7 @@ Now we continue with installing the Expo CLI:
 npm install -g expo-cli
 ```
 
-Now you should have the fiels needed, make sure u have the eas.json and the app.json file.
+Now you should have the files needed, but make sure you have the eas.json and the app.json file.
 To run the program, open a new terminal and go to the project folder, then run the program with this:
 ```
 npx expo start
@@ -28,7 +28,7 @@ npx expo start
 From here you can follow the cli on the screen, in android studio you need to create the emulator for our app (you can only use the emulator for the interface creation, BLE will have to be physically tested)
 
 # Android studio
-Download android studio and make sure you got sdk. Rename the fodler in case it is Sdk, since the app otherwise won't find it.
+Download android studio and make sure you got the sdk folder, otherwise rename the folder since it is named Sdk. The app otherwise won't find it and can't start.
 
 Create a new device emulator which is compatible with our code: 
 - Select the Pixel 7 phone because it has google play on it
