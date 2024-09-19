@@ -1,5 +1,6 @@
 # Mobile-App
 The gitignore have excluded some modules etc that we will need. Follow the guide below to get it working.
+And remember to use the "Development build" once the emulator opens the app because the use of BLE is an extended feature outside Expo Go App
 
 # Installation and running the app
 How to use this app is as such, we start by installing the modules our project need:
