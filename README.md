@@ -3,6 +3,12 @@ The gitignore have excluded some modules etc that we will need. Follow the guide
 
 # Installation and running the app
 How to use this app is as such, we start by installing the modules our project need:
+
+nodejs and npm
+```
+sudo pacman -S nodejs npm
+```
+Then run,
 ```
 npm install
 ```
