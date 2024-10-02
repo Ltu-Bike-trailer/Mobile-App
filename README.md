@@ -35,3 +35,21 @@ Create a new device emulator which is compatible with our code:
 - Use/install the "S" version on it since it's the API31 for androids
 
 After installation, start the emulator then connect the app to the emulator by pressing "a" in the expo CLI window in your terminal.
+
+```mermaid
+sequenceDiagram
+User->>App: Start App
+App->>User: Start GUI
+User->>App: Choose BLE device
+App->>ESP32: Send connection request
+ESP32->>App: Send ACK
+App->>User: Update GUI
+Loop Device Running
+    ESP32->>App: Send Cart Info
+    App->>User: Relay info to user 
+
+User->>App: Close APP
+App->>ESP32: Stop connection
+App->>User: Stop GUI
+end
+```
