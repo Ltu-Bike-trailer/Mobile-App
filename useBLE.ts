@@ -1,68 +1,46 @@
-/* eslint-disable no-bitwise */
+///* eslint-disable no-bitwise */
+
 import { useMemo, useState } from "react";
-import { PermissionsAndroid, Platform } from "react-native";
 import {
-  BleError,
   BleManager,
-  Characteristic,
   Device,
 } from "react-native-ble-plx";
-
+import { Buffer } from "buffer";
+import { PermissionsAndroid, Platform } from "react-native";
 import * as ExpoDevice from "expo-device";
 
-import base64 from "react-native-base64";
-
-const HEART_RATE_UUID = "0000180d-0000-1000-8000-00805f9b34fb";
-const HEART_RATE_CHARACTERISTIC = "00002a37-0000-1000-8000-00805f9b34fb";
+// UUIDs for your service and characteristic
+const SERVICE_UUID = "fafafafa-fafa-fafa-fafa-fafafafafafa"; // Cart ID
+const SPEED_UUID = "a3c87500-8ed3-4bdf-8a39-a01bebede295"; // speed service
+const RANGE_UUID = "4f548a6e-3e95-4afe-92b0-b0d9b32fb04a"; // range service (Later changed to battery * range/Bpercentage)
+const BATTERY_UUID = "c94f81b6-7240-401b-8641-b09e746352dc"; // battery service
 
 interface BluetoothLowEnergyApi {
   requestPermissions(): Promise<boolean>;
   scanForPeripherals(): void;
-  connectToDevice: (deviceId: Device) => Promise<void>;
+  connectToDevice: (device: Device) => Promise<void>;
   disconnectFromDevice: () => void;
   connectedDevice: Device | null;
   allDevices: Device[];
-  heartRate: number;
+  speedData: string | null;
+  rangeData: string | null;
+  batteryData: string | null;
+  isConnecting: boolean;
+  isConnectingTimeout: boolean;
+  deviceName: string | null;
 }
 
 function useBLE(): BluetoothLowEnergyApi {
   const bleManager = useMemo(() => new BleManager(), []);
   const [allDevices, setAllDevices] = useState<Device[]>([]);
   const [connectedDevice, setConnectedDevice] = useState<Device | null>(null);
-  const [heartRate, setHeartRate] = useState<number>(0);
-
-  const requestAndroid31Permissions = async () => {
-    const bluetoothScanPermission = await PermissionsAndroid.request(
-      PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
-      {
-        title: "Location Permission",
-        message: "Bluetooth Low Energy requires Location",
-        buttonPositive: "OK",
-      }
-    );
-    const bluetoothConnectPermission = await PermissionsAndroid.request(
-      PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
-      {
-        title: "Location Permission",
-        message: "Bluetooth Low Energy requires Location",
-        buttonPositive: "OK",
-      }
-    );
-    const fineLocationPermission = await PermissionsAndroid.request(
-      PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-      {
-        title: "Location Permission",
-        message: "Bluetooth Low Energy requires Location",
-        buttonPositive: "OK",
-      }
-    );
-
-    return (
-      bluetoothScanPermission === "granted" &&
-      bluetoothConnectPermission === "granted" &&
-      fineLocationPermission === "granted"
-    );
-  };
+  const [speedData, setSpeedData] = useState<string | null>(null);
+  const [rangeData, setRangeData] = useState<string | null>(null);
+  const [batteryData, setBatteryData] = useState<string | null>(null);
+  const [isConnecting, setIsConnecting] = useState<boolean>(false);
+  const [deviceName, setDeviceName] = useState<string | null>(null);
+  const [isConnectingTimeout, setIsConnectingTimeout] = useState<boolean>(false);
+  
 
   const requestPermissions = async () => {
     if (Platform.OS === "android") {
@@ -77,137 +55,209 @@ function useBLE(): BluetoothLowEnergyApi {
         );
         return granted === PermissionsAndroid.RESULTS.GRANTED;
       } else {
-        const isAndroid31PermissionsGranted =
-          await requestAndroid31Permissions();
-
-        return isAndroid31PermissionsGranted;
+        return await requestAndroid31Permissions();
       }
-    } else {
-      return true;
     }
+    return true;
   };
 
-  const isDuplicteDevice = (devices: Device[], nextDevice: Device) =>
-    devices.findIndex((device) => nextDevice.id === device.id) > -1;
+  // ANDROID SPECIFICS (Needed in order to work since android 31)
+  const requestAndroid31Permissions = async () => {
+    const bluetoothScanPermission = await PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
+      {
+        title: "Bluetooth Scan Permission",
+        message: "Bluetooth Low Energy requires Scan Permission",
+        buttonPositive: "OK",
+      }
+    );
+    const bluetoothConnectPermission = await PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
+      {
+        title: "Bluetooth Connect Permission",
+        message: "Bluetooth Low Energy requires Connect Permission",
+        buttonPositive: "OK",
+      }
+    );
+    const fineLocationPermission = await PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+      {
+        title: "Location Permission",
+        message: "Bluetooth Low Energy requires Location",
+        buttonPositive: "OK",
+      }
+    );
 
-  const scanForPeripherals = () =>
+    return (
+      bluetoothScanPermission === PermissionsAndroid.RESULTS.GRANTED &&
+      bluetoothConnectPermission === PermissionsAndroid.RESULTS.GRANTED &&
+      fineLocationPermission === PermissionsAndroid.RESULTS.GRANTED
+    );
+  };
+
+  const scanForPeripherals = () => {
     bleManager.startDeviceScan(null, null, (error, device) => {
-      //if (error) {
-      //  console.log(error);
-      //}
-      
-      //if (device && device.name?.includes("CorSense")) {
-      //  setAllDevices((prevState: Device[]) => {
-      //    if (!isDuplicteDevice(prevState, device)) {
-      //      return [...prevState, device];
-      //    }
-      //    return prevState;
-      //  });
-      //}
+      if (error) {
+        console.error(error);
+        return;
+      }
 
       if (device && (device.name || device.localName)) {
         console.log("Device found:", device.name || device.localName);
       }
-      
+
       if (device) {
         const deviceName = device.name || device.localName || "Unknown Device";
-        console.log("Device found:", deviceName);
         setAllDevices((prevState: Device[]) => {
-          if (!isDuplicteDevice(prevState, device)) {
+          if (!isDuplicateDevice(prevState, device)) {
             return [...prevState, device];
           }
           return prevState;
         });
       }
-      
     });
+  };
 
-  //const connectToDevice = async (device: Device) => {
-  //  try {
-  //    const deviceConnection = await bleManager.connectToDevice(device.id);
-  //    setConnectedDevice(deviceConnection);
-  //    await deviceConnection.discoverAllServicesAndCharacteristics();
-  //    bleManager.stopDeviceScan();
-  //    startStreamingData(deviceConnection);
-  //  } catch (e) {
-  //    console.log("FAILED TO CONNECT", e);
-  //  }
-  //};
+  const isDuplicateDevice = (devices: Device[], nextDevice: Device) =>
+    devices.findIndex((device) => nextDevice.id === device.id) > -1;
 
   const connectToDevice = async (device: Device) => {
     try {
-      const connectedDevice = await bleManager.connectToDevice(device.id);
-      await connectedDevice.discoverAllServicesAndCharacteristics();
-      
-      // Get the device name after connecting
-      const deviceName = connectedDevice.name || connectedDevice.localName;
-      console.log("Device Name:", deviceName);
-      
-      // Set activated device and stop listenning for new devices
-      setConnectedDevice(connectedDevice);
-      bleManager.stopDeviceScan();
-    } catch (e) {
-      console.log("Connection failed:", e);
-    }
-  };
+      setDeviceName(device.name);
+      setIsConnecting(true); // Trying to connect to a device (popup for users)
   
+      // Set a timeout for the connection attempt (15 seconds)
+      const timeoutPromise = new Promise<void>((_, reject) => {
+        setTimeout(() => {
+          setIsConnectingTimeout(true)
+          reject(new Error("Failed to connect to device"));
+        }, 15000); // 15 seconds timeout
+      });
+  
+      const connectPromise = (async () => {
+        const connectedDevice = await device.connect();
+        await connectedDevice.discoverAllServicesAndCharacteristics();
+        setConnectedDevice(connectedDevice);
 
-  const disconnectFromDevice = () => {
-    if (connectedDevice) {
-      bleManager.cancelDeviceConnection(connectedDevice.id);
-      setConnectedDevice(null);
-      setHeartRate(0);
-    }
-  };
+      // Subscribe to notifications from the characteristic inside (speed value)
+      connectedDevice.monitorCharacteristicForService(
+        SERVICE_UUID,
+        SPEED_UUID,
+        (error, characteristic) => {
+          if (error) {
+            console.error(error);
+            return;
+          }
 
-  const onHeartRateUpdate = (
-    error: BleError | null,
-    characteristic: Characteristic | null
-  ) => {
-    if (error) {
-      console.log(error);
-      return -1;
-    } else if (!characteristic?.value) {
-      console.log("No Data was recieved");
-      return -1;
-    }
-
-    const rawData = base64.decode(characteristic.value);
-    let innerHeartRate: number = -1;
-
-    const firstBitValue: number = Number(rawData) & 0x01;
-
-    if (firstBitValue === 0) {
-      innerHeartRate = rawData[1].charCodeAt(0);
-    } else {
-      innerHeartRate =
-        Number(rawData[1].charCodeAt(0) << 8) +
-        Number(rawData[2].charCodeAt(2));
-    }
-
-    setHeartRate(innerHeartRate);
-  };
-
-  const startStreamingData = async (device: Device) => {
-    if (device) {
-      device.monitorCharacteristicForService(
-        HEART_RATE_UUID,
-        HEART_RATE_CHARACTERISTIC,
-        onHeartRateUpdate
+          if (characteristic?.value) {
+            // Decode the Base64 value received
+            const data = Buffer.from(characteristic.value, "base64").toString();
+            
+            // Attempt to parse the data as a float
+            const speedValue = parseFloat(data);
+            
+            // Check if speedValue is a valid number
+            if (!isNaN(speedValue)) {
+              setSpeedData(speedValue.toString()); // Update to string representation
+            } else {
+              setSpeedData(null); // Set to null if not a valid number
+            }
+          
+            console.log("Speed data:", data);
+          }
+        }
       );
-    } else {
-      console.log("No Device Connected");
+
+      // Subscribe to notifications from the characteristic inside (Range value)
+      connectedDevice.monitorCharacteristicForService(
+        SERVICE_UUID,
+        RANGE_UUID,
+        (error, characteristic) => {
+          if (error) {
+            console.error(error);
+            return;
+          }
+
+          if (characteristic?.value) {
+            // Decode the Base64 value received
+            const data = Buffer.from(characteristic.value, "base64").toString();
+            
+            // Attempt to parse the data as a float
+            const rangeValue = parseFloat(data);
+            
+            // Check if speedValue is a valid number
+            if (!isNaN(rangeValue)) {
+              setRangeData(rangeValue.toString()); // Update to string representation
+            } else {
+              setRangeData(null); // Set to null if not a valid number
+            }
+          
+            console.log("Range data:", data);
+          }
+        }
+      );
+
+      // Subscribe to notifications from the characteristic inside (battery value)
+      connectedDevice.monitorCharacteristicForService(
+        SERVICE_UUID,
+        BATTERY_UUID,
+        (error, characteristic) => {
+          if (error) {
+            console.error(error);
+            return;
+          }
+
+          if (characteristic?.value) {
+            // Decode the Base64 value received
+            const data = Buffer.from(characteristic.value, "base64").toString();
+            
+            // Attempt to parse the data as a float
+            const batteryValue = parseFloat(data);
+            
+            // Check if speedValue is a valid number
+            if (!isNaN(batteryValue)) {
+              setBatteryData(batteryValue.toString()); // Update to string representation
+            } else {
+              setBatteryData(null); // Set to null if not a valid number
+            }
+          
+            console.log("Battery data:", data);
+          }
+        }
+      );
+
+      setIsConnecting(false); // Successfully connected to new device (set false to remove popup modal)
+    })();
+
+    // Race between connection and timeout
+    await Promise.race([connectPromise, timeoutPromise]);
+  } catch (error) {
+    console.error("Connection error:", error);
+    setIsConnecting(false); // Hide connection modal on failure
+    setIsConnectingTimeout(true); // Mark that the connection timed out
+  }
+};
+
+  const disconnectFromDevice = async () => {
+    if (connectedDevice) {
+      await connectedDevice.cancelConnection();
+      setConnectedDevice(null);
     }
   };
 
   return {
-    scanForPeripherals,
     requestPermissions,
+    scanForPeripherals,
     connectToDevice,
-    allDevices,
-    connectedDevice,
     disconnectFromDevice,
-    heartRate,
+    connectedDevice,
+    speedData,
+    rangeData,
+    batteryData,
+    allDevices,
+    isConnecting,
+    isConnectingTimeout,
+    deviceName,
   };
 }
 
