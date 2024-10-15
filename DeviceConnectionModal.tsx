@@ -1,7 +1,6 @@
 import React, { FC, useCallback } from "react";
 import {
   FlatList,
-  ScrollView,
   ListRenderItemInfo,
   Modal,
   SafeAreaView,
@@ -64,18 +63,25 @@ const DeviceModal: FC<DeviceModalProps> = (props) => {
       animationType="slide"
       transparent={false}
       visible={visible}
+        
     >
       <SafeAreaView style={modalStyle.modalTitle}>
         <Text style={modalStyle.modalTitleText}>
           Tap on a device to connect
         </Text>
-        <ScrollView>
         <FlatList
           contentContainerStyle={modalStyle.modalFlatlistContiner}
-          data={devices}
-          renderItem={renderDeviceModalListItem}
+          data={devices} // devices
+          renderItem={renderDeviceModalListItem}  //renderDeviceModalListItem //renderItem={({item}) => <Item title={item.title} />}
         />
-        </ScrollView>
+        <TouchableOpacity 
+          style={modalStyle.modalBackBtn}
+          onPress={closeModal}
+        >
+          <Text style={modalStyle.ctaButtonText}>
+            Back
+          </Text>
+        </TouchableOpacity>
       </SafeAreaView>
     </Modal>
   );
@@ -83,11 +89,12 @@ const DeviceModal: FC<DeviceModalProps> = (props) => {
 
 const modalStyle = StyleSheet.create({
   modalContainer: {
-    flex: 1,
+    //flex: 1,
     backgroundColor: "wheat",
   },
   modalFlatlistContiner: {
-    flex: 1,
+    //flex: 1,
+    marginTop: 25,
     justifyContent: "center",
   },
   modalCellOutline: {
@@ -110,22 +117,33 @@ const modalStyle = StyleSheet.create({
     textAlign: "center",
   },
   ctaButton: {
-    backgroundColor: "royalblue",
+    backgroundColor: "#ff9e7a",
     justifyContent: "center",
-    alignItems: "center",
+    //alignItems: "center",
+    textAlign: "right",
     height: 50,
     marginHorizontal: 20,
     marginBottom: 5,
     borderRadius: 8,
+    paddingLeft: 25,
   },
   ctaButtonText: {
-    fontSize: 18,
+    fontSize: 25,
     fontWeight: "bold",
-    color: "white",
+    color: "black",
   },
   scrollView: {
-    backgroundColor: 'wheat',
+    //backgroundColor: "#2a2e30",
     marginHorizontal: 20,
+  },
+  modalBackBtn: {
+    backgroundColor: "coral",
+    justifyContent: "center",
+    alignItems: "center",
+    height: 55,
+    marginHorizontal: 20,
+    marginBottom: 15,
+    borderRadius: 8,
   },
 });
 

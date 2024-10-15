@@ -44,7 +44,7 @@
         "android.permission.BLUETOOTH_ADMIN",
         "android.permission.BLUETOOTH_CONNECT"
       ],
-      "package": "com.danthu-0.expoblesample"
+      "package": "com.danthu0.expoblesample"
     },
     "web": {
       "favicon": "./assets/favicon.png"
