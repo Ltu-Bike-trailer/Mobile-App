@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "expo-ble-sample",
-    "slug": "expo-ble-sample",
+    "name": "bababla",
+    "slug": "bababla",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -51,7 +51,7 @@
     },
     "extra": {
       "eas": {
-        "projectId": "fb981f9f-386b-4c25-b4d5-0dea848e5bf7"
+        "projectId": "34e66521-6e16-4ffc-98aa-b6c4022f5b92"
       }
     }
   }

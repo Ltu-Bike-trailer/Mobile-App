@@ -11,8 +11,11 @@ import {
 } from "react-native";
 import DeviceModal from "./DeviceConnectionModal";
 import useBLE from "./useBLE";
+import {initDatabase, exportTableToCSV} from "./Database";
+import * as SQLite from "expo-sqlite/legacy";
 
 const App = () => {
+  const db = SQLite.openDatabase("DatabaseName.db");
   const {
     requestPermissions,
     scanForPeripherals,
@@ -41,10 +44,11 @@ const App = () => {
   };
 
   const openModal = async () => { // Connection modal will show
+    initDatabase(db);
     setIsModalVisible(true);
     scanForDevices();
-    };
-
+  };
+  
   const handleRetry = () => {
     openModal();  // Restart the connection process by reopening the modal and scanning for devices.
   };

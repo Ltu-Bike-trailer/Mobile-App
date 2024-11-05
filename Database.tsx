@@ -40,7 +40,7 @@ export function dropTable(db:SQLite.Database){
 };
 
 
-export function insertDataTest(db: SQLite.Database, data: any){
+export function insertData(db: SQLite.Database, data: any){
   console.log("started");
   db.transaction((tx) => {
     console.log("transaction started");

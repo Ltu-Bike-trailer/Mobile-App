@@ -8,6 +8,8 @@ import {
 import { Buffer } from "buffer";
 import { PermissionsAndroid, Platform } from "react-native";
 import * as ExpoDevice from "expo-device";
+import {initDatabase, insertData, dropTable} from "./Database";
+import * as SQLite from "expo-sqlite/legacy";
 
 // UUIDs for your service and characteristic
 const SERVICE_UUID = "fafafafa-fafa-fafa-fafa-fafafafafafa"; // Cart ID
@@ -40,7 +42,7 @@ function useBLE(): BluetoothLowEnergyApi {
   const [isConnecting, setIsConnecting] = useState<boolean>(false);
   const [deviceName, setDeviceName] = useState<string | null>(null);
   const [isConnectingTimeout, setIsConnectingTimeout] = useState<boolean>(false);
-  
+  const db = SQLite.openDatabase("DatabaseName.db");
 
   const requestPermissions = async () => {
     if (Platform.OS === "android") {
@@ -152,7 +154,7 @@ function useBLE(): BluetoothLowEnergyApi {
           if (characteristic?.value) {
             // Decode the Base64 value received
             const data = Buffer.from(characteristic.value, "base64").toString();
-            
+            insertData(db, data);
             // Attempt to parse the data as a float
             const speedValue = parseFloat(data);
             
@@ -181,7 +183,7 @@ function useBLE(): BluetoothLowEnergyApi {
           if (characteristic?.value) {
             // Decode the Base64 value received
             const data = Buffer.from(characteristic.value, "base64").toString();
-            
+            insertData(db, data);
             // Attempt to parse the data as a float
             const rangeValue = parseFloat(data);
             
@@ -210,7 +212,7 @@ function useBLE(): BluetoothLowEnergyApi {
           if (characteristic?.value) {
             // Decode the Base64 value received
             const data = Buffer.from(characteristic.value, "base64").toString();
-            
+            insertData(db, data);
             // Attempt to parse the data as a float
             const batteryValue = parseFloat(data);
             
@@ -242,6 +244,7 @@ function useBLE(): BluetoothLowEnergyApi {
     if (connectedDevice) {
       await connectedDevice.cancelConnection();
       setConnectedDevice(null);
+      dropTable(db);
     }
   };
 
