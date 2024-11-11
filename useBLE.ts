@@ -122,14 +122,16 @@ function useBLE(): BluetoothLowEnergyApi {
     devices.findIndex((device) => nextDevice.id === device.id) > -1;
 
   const connectToDevice = async (device: Device) => {
+    let timeoutId: NodeJS.Timeout | null = null; // Here we declare timeoutId to track the timeout
     try {
       setDeviceName(device.name);
       setIsConnecting(true); // Trying to connect to a device (popup for users)
+      setIsConnectingTimeout(false); // Reset timeout indicator on each connection attempt
   
-      // Set a timeout for the connection attempt (15 seconds)
+      // Sets a timeout for the connection attempt
       const timeoutPromise = new Promise<void>((_, reject) => {
-        setTimeout(() => {
-          setIsConnectingTimeout(true)
+        timeoutId = setTimeout(() => {
+          setIsConnectingTimeout(true);
           reject(new Error("Failed to connect to device"));
         }, 15000); // 15 seconds timeout
       });
@@ -139,103 +141,111 @@ function useBLE(): BluetoothLowEnergyApi {
         await connectedDevice.discoverAllServicesAndCharacteristics();
         setConnectedDevice(connectedDevice);
 
-      // Subscribe to notifications from the characteristic inside (speed value)
-      connectedDevice.monitorCharacteristicForService(
-        SERVICE_UUID,
-        SPEED_UUID,
-        (error, characteristic) => {
-          if (error) {
-            console.error(error);
-            return;
-          }
+        // Clear the timeout if connection succeeds (else we get "retry" popup no matter what)
+        if (timeoutId) clearTimeout(timeoutId);
 
-          if (characteristic?.value) {
-            // Decode the Base64 value received
-            const data = Buffer.from(characteristic.value, "base64").toString();
-            
-            // Attempt to parse the data as a float
-            const speedValue = parseFloat(data);
-            
-            // Check if speedValue is a valid number
-            if (!isNaN(speedValue)) {
-              setSpeedData(speedValue.toString()); // Update to string representation
-            } else {
-              setSpeedData(null); // Set to null if not a valid number
+        // Subscribe to notifications from the characteristic inside (speed value)
+        connectedDevice.monitorCharacteristicForService(
+          SERVICE_UUID,
+          SPEED_UUID,
+          (error, characteristic) => {
+            if (error) {
+              console.error(error);
+              return;
             }
-          
-            console.log("Speed data:", data);
-          }
-        }
-      );
 
-      // Subscribe to notifications from the characteristic inside (Range value)
-      connectedDevice.monitorCharacteristicForService(
-        SERVICE_UUID,
-        RANGE_UUID,
-        (error, characteristic) => {
-          if (error) {
-            console.error(error);
-            return;
-          }
+            if (characteristic?.value) {
+              // Decode the Base64 value received
+              const data = Buffer.from(characteristic.value, "base64").toString();
 
-          if (characteristic?.value) {
-            // Decode the Base64 value received
-            const data = Buffer.from(characteristic.value, "base64").toString();
+              // Attempt to parse the data as a float
+              const speedValue = parseFloat(data);
+
+              // Check if speedValue is a valid number
+              if (!isNaN(speedValue)) {
+                setSpeedData(speedValue.toString()); // Update to string representation
+              } else {
+                setSpeedData(null); // Set to null if not a valid number
+              }
             
-            // Attempt to parse the data as a float
-            const rangeValue = parseFloat(data);
-            
-            // Check if speedValue is a valid number
-            if (!isNaN(rangeValue)) {
-              setRangeData(rangeValue.toString()); // Update to string representation
-            } else {
-              setRangeData(null); // Set to null if not a valid number
+              console.log("Speed data:", data);
             }
-          
-            console.log("Range data:", data);
           }
-        }
-      );
+        );
 
-      // Subscribe to notifications from the characteristic inside (battery value)
-      connectedDevice.monitorCharacteristicForService(
-        SERVICE_UUID,
-        BATTERY_UUID,
-        (error, characteristic) => {
-          if (error) {
-            console.error(error);
-            return;
-          }
-
-          if (characteristic?.value) {
-            // Decode the Base64 value received
-            const data = Buffer.from(characteristic.value, "base64").toString();
-            
-            // Attempt to parse the data as a float
-            const batteryValue = parseFloat(data);
-            
-            // Check if speedValue is a valid number
-            if (!isNaN(batteryValue)) {
-              setBatteryData(batteryValue.toString()); // Update to string representation
-            } else {
-              setBatteryData(null); // Set to null if not a valid number
+        // Subscribe to notifications from the characteristic inside (Range value)
+        connectedDevice.monitorCharacteristicForService(
+          SERVICE_UUID,
+          RANGE_UUID,
+          (error, characteristic) => {
+            if (error) {
+              console.error(error);
+              return;
             }
-          
-            console.log("Battery data:", data);
+
+            if (characteristic?.value) {
+              // Decode the Base64 value received
+              const data = Buffer.from(characteristic.value, "base64").toString();
+
+              // Attempt to parse the data as a float
+              const rangeValue = parseFloat(data);
+
+              // Check if speedValue is a valid number
+              if (!isNaN(rangeValue)) {
+                setRangeData(rangeValue.toString()); // Update to string representation
+              } else {
+                setRangeData(null); // Set to null if not a valid number
+              }
+            
+              console.log("Range data:", data);
+            }
           }
-        }
-      );
+        );
 
-      setIsConnecting(false); // Successfully connected to new device (set false to remove popup modal)
-    })();
+        // Subscribe to notifications from the characteristic inside (battery value)
+        connectedDevice.monitorCharacteristicForService(
+          SERVICE_UUID,
+          BATTERY_UUID,
+          (error, characteristic) => {
+            if (error) {
+              console.error(error);
+              return;
+            }
 
-    // Race between connection and timeout
+            if (characteristic?.value) {
+              // Decode the Base64 value received
+              const data = Buffer.from(characteristic.value, "base64").toString();
+
+              // Attempt to parse the data as a float
+              const batteryValue = parseFloat(data);
+
+              // Check if speedValue is a valid number
+              if (!isNaN(batteryValue)) {
+                setBatteryData(batteryValue.toString()); // Update to string representation
+              } else {
+                setBatteryData(null); // Set to null if not a valid number
+              }
+            
+              console.log("Battery data:", data);
+            }
+          }
+        );
+
+        setIsConnecting(false); // Successfully connected to new device (set false to remove popup modal)
+        setIsConnectingTimeout(false);
+      })();
+
+    // Wait for promises to conclude, connection and/or timeout
     await Promise.race([connectPromise, timeoutPromise]);
   } catch (error) {
-    console.error("Connection error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    console.error("Connection error:", errorMessage);
+  
     setIsConnecting(false); // Hide connection modal on failure
-    setIsConnectingTimeout(true); // Mark that the connection timed out
+    setIsConnectingTimeout(errorMessage === "Failed to connect to device"); // Only set timeout flag if it's a timeout error
+    if (timeoutId) clearTimeout(timeoutId);
   }
+  if (timeoutId) clearTimeout(timeoutId);
 };
 
   const disconnectFromDevice = async () => {
