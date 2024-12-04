@@ -12,7 +12,11 @@ import {
 import DeviceModal from "./DeviceConnectionModal";
 import useBLE from "./useBLE";
 
+import {initDatabase, exportTableToCSV} from "./Database";
+import * as SQLite from "expo-sqlite/legacy";
+
 const App = () => {
+  const db = SQLite.openDatabase("DatabaseName.db");
   const {
     requestPermissions,
     scanForPeripherals,
