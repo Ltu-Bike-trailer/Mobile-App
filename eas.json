@@ -3,6 +3,9 @@
     "preview": {
       "android": {
         "buildType": "apk"
+      },
+      "ios": {
+        "distribution": "internal"
       }
     },
     "preview2": {
@@ -16,7 +19,10 @@
     "preview4": {
       "distribution": "internal"
     },
-    "production": {}
+    "development": {
+      "ios": {
+        "distribution": "internal"
+      }
+    }
   }
 }
-
