@@ -6,7 +6,7 @@ import * as ExpoDevice from "expo-device";
 
 // SQLite stuff
 import {initDatabase, exportTableToCSV} from "./Database";
-import * as SQLite from "expo-sqlite/legacy";
+//import * as SQLite from "expo-sqlite/legacy";
 
 // UUIDs for your service and characteristics
 const SERVICE_UUID = "fafafafa-fafa-fafa-fafa-fafafafafafa";
@@ -27,6 +27,7 @@ interface BluetoothLowEnergyApi {
   isConnecting: boolean;
   isConnectingTimeout: boolean;
   deviceName: string | null;
+  retryScan: () => void;
 }
 
 function useBLE(): BluetoothLowEnergyApi {
@@ -39,7 +40,7 @@ function useBLE(): BluetoothLowEnergyApi {
   const [isConnecting, setIsConnecting] = useState<boolean>(false);
   const [isConnectingTimeout, setIsConnectingTimeout] = useState<boolean>(false);
   const [deviceName, setDeviceName] = useState<string | null>(null);
-  const db = SQLite.openDatabase("DatabaseName.db");
+  //const db = SQLite.openDatabase("DatabaseName.db");
 
   const requestPermissions = async (): Promise<boolean> => {
     if (Platform.OS === "android") {
@@ -169,7 +170,17 @@ function useBLE(): BluetoothLowEnergyApi {
     if (connectedDevice) {
       await connectedDevice.cancelConnection();
       setConnectedDevice(null);
+      setAllDevices([]); // Optionally reset the list of scanned devices
     }
+  };
+
+  // Reset connection state and restart scan
+  const retryScan = () => {
+    setConnectedDevice(null);
+    setIsConnecting(false);
+    setIsConnectingTimeout(false);
+    setAllDevices([]); // Optionally reset the list of scanned devices
+    //scanForPeripherals(); // Start scanning again
   };
 
   return {
@@ -185,6 +196,7 @@ function useBLE(): BluetoothLowEnergyApi {
     isConnecting,
     isConnectingTimeout,
     deviceName,
+    retryScan, // Expose retryScan for the button
   };
 }
 

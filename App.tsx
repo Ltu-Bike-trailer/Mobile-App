@@ -1,4 +1,4 @@
-import React, { useState, FC, useRef } from "react";
+import React, { useState, FC, useRef, useEffect } from "react";
 import {
   SafeAreaView,
   StyleSheet,
@@ -13,10 +13,10 @@ import DeviceModal from "./DeviceConnectionModal";
 import useBLE from "./useBLE";
 
 import {initDatabase, exportTableToCSV} from "./Database";
-import * as SQLite from "expo-sqlite/legacy";
+//import * as SQLite from "expo-sqlite/legacy";
 
 const App = () => {
-  const db = SQLite.openDatabase("DatabaseName.db");
+  //const db = SQLite.openDatabase("DatabaseName.db");
   const {
     requestPermissions,
     scanForPeripherals,
@@ -30,6 +30,7 @@ const App = () => {
     isConnecting, // wait module for BLE connection
     isConnectingTimeout, // Timeout error
     deviceName, // device name
+    retryScan,
   } = useBLE();
   const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
 
@@ -45,11 +46,12 @@ const App = () => {
   };
 
   const openModal = async () => { // Connection modal will show
-    setIsModalVisible(true);
     scanForDevices();
+    setIsModalVisible(true);
     };
 
-  const handleRetry = () => {
+  const handleRetry = async () => {
+    retryScan();
     openModal();  // Restart the connection process by reopening the modal and scanning for devices.
   };
 
